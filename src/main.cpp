@@ -7,6 +7,27 @@
 #include <SDL.h>
 #include <stb_image.h>
 
+unsigned int loadTexture(const char* path, int format)
+{
+  unsigned int texture;
+  glGenTextures(1, &texture);
+
+  int width, height, nrChannels;
+  stbi_set_flip_vertically_on_load(true);
+  unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+  if (!data)
+    throw std::runtime_error("Failed to load texture");
+
+  glBindTexture(GL_TEXTURE_2D, texture);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  stbi_image_free(data);
+
+  return texture;
+}
+
 int main()
 {
   SDL_SetHint(SDL_HINT_EVENT_LOGGING, "1");
@@ -58,23 +79,12 @@ int main()
   glEnableVertexAttribArray(2);
 
   Shader shader("shaders/triangle.vert", "shaders/triangle.frag");
+    shader.use();
+    shader.setInt("texture1", 0);
+    shader.setInt("texture2", 1);
 
-  unsigned int texture;
-  {
-    glGenTextures(1, &texture);
-
-    int width, height, nrChannels;
-    unsigned char* data = stbi_load("assets/chibismug.png", &width, &height, &nrChannels, 0);
-    if (!data)
-      throw std::runtime_error("Failed to load texture");
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    stbi_image_free(data);
-  }
+  unsigned int texture1 = loadTexture("assets/container.jpg", GL_RGB);
+  unsigned int texture2 = loadTexture("assets/awesomeface.png", GL_RGBA);
 
   SDL_Event event;
   bool quit = false;
@@ -97,8 +107,10 @@ int main()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    shader.use();
-    glBindTexture(GL_TEXTURE_2D, texture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, texture2);
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
