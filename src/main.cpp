@@ -3,8 +3,12 @@
 #include <cmath>
 #include <format>
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <SDL.h>
+#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 unsigned int loadTexture(const char* path, int format)
@@ -30,7 +34,6 @@ unsigned int loadTexture(const char* path, int format)
 
 int main()
 {
-  SDL_SetHint(SDL_HINT_EVENT_LOGGING, "1");
   SDL_SetHint(SDL_HINT_VIDEODRIVER, "wayland,x11");
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
     throw std::runtime_error("Failed to initialize SDL");
@@ -85,6 +88,7 @@ int main()
 
   unsigned int texture1 = loadTexture("assets/container.jpg", GL_RGB);
   unsigned int texture2 = loadTexture("assets/awesomeface.png", GL_RGBA);
+  unsigned int texture3 = loadTexture("assets/chibismug.png", GL_RGBA);
 
   SDL_Event event;
   bool quit = false;
@@ -107,13 +111,38 @@ int main()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    glBindVertexArray(vao);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    {
+      glm::mat4 trans = glm::mat4(1.0f);
+      trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+      trans = glm::rotate(trans, float(SDL_GetTicks()) / 1000, glm::vec3(0.0, 0.0, 1.0));
+      unsigned int transformLoc = glGetUniformLocation(shader.id, "transform");
+      glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, texture1);
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, texture2);
+      glBindVertexArray(vao);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+      glBindVertexArray(0);
+    }
+
+    {
+      glm::mat4 trans = glm::mat4(1.0f);
+      trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
+      trans = glm::scale(trans, glm::vec3(std::abs(std::sin(float(SDL_GetTicks()) / 1000))));
+      unsigned int transformLoc = glGetUniformLocation(shader.id, "transform");
+      glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+      // Bind the same texture twice so we don't need to make another shader.
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, texture3);
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, texture3);
+      glBindVertexArray(vao);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+      glBindVertexArray(0);
+    }
 
     SDL_GL_SwapWindow(window);
   }
