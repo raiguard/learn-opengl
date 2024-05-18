@@ -15,6 +15,7 @@ public:
   void setBool(const std::string &name, bool value) const;
   void setInt(const std::string &name, int32_t value) const;
   void setFloat(const std::string &name, float value) const;
+
 private:
-  uint32_t compile(uint32_t type, const std::string& source);
+  uint32_t compile(uint32_t type, const std::string &source);
 };
