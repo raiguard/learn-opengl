@@ -1,25 +1,31 @@
+#include <cmath>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 
 const char *vertexShaderSource = R"(
-  #version 330 core
-  layout (location = 0) in vec3 aPos;
+#version 330 core
+layout (location = 0) in vec3 aPos; // the position variable has attribute position 0
 
-  void main()
-  {
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-  }
+out vec4 vertexColor; // specify a color output to the fragment shader
+
+void main()
+{
+    gl_Position = vec4(aPos, 1.0); // see how we directly give a vec3 to vec4's constructor
+    vertexColor = vec4(0.5, 0.0, 0.0, 1.0); // set the output variable to a dark-red color
+}
 )";
 
 const char *fragmentShaderSource = R"(
-  #version 330 core
-  out vec4 FragColor;
+#version 330 core
+out vec4 FragColor;
 
-  void main()
-  {
-      FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-  }
+uniform vec4 ourColor; // we set this variable in the OpenGL code.
+
+void main()
+{
+    FragColor = ourColor;
+}
 )";
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
@@ -105,24 +111,34 @@ int main() {
       -0.5f, -0.5f, 0.0f,  // bottom left
       -0.5f,  0.5f, 0.0f   // top left
   };
+  float vertices2[] = {
+       0.7f,  0.7f, 0.0f,  // top right
+       0.7f, 0.5f, 0.0f,  // bottom right
+       0.6f, 0.5f, 0.0f,  // bottom left
+       0.6f,  0.7f, 0.0f   // top left
+  };
   unsigned int indices[] = {  // note that we start from 0!
       0, 1, 3,   // first triangle
       1, 2, 3    // second triangle
   };
 
-  unsigned int ebo;
-  glGenBuffers(1, &ebo);
+  unsigned int vaos[2], vbos[2], ebos[2];
+  glGenVertexArrays(2, vaos);
+  glGenBuffers(2, vbos);
+  glGenBuffers(2, ebos);
 
-  unsigned int vbo;
-  glGenBuffers(1, &vbo);
-
-  unsigned int vao;
-  glGenVertexArrays(1, &vao);
-
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBindVertexArray(vaos[0]);
+  glBindBuffer(GL_ARRAY_BUFFER, vbos[0]);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebos[0]);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+
+  glBindVertexArray(vaos[1]);
+  glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebos[1]);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
@@ -137,8 +153,18 @@ int main() {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    float timeValue = glfwGetTime();
+    float greenValue = (std::sin(timeValue) / 2.0f) + 0.5f;
+    int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
     glUseProgram(shaderProgram);
-    glBindVertexArray(vao);
+    glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+
+    glUseProgram(shaderProgram);
+    glBindVertexArray(vaos[0]);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glBindVertexArray(vaos[1]);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
