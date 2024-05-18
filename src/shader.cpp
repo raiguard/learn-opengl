@@ -1,14 +1,14 @@
 #include "shader.hpp"
-#include <filesystem>
 #include <format>
 #include <fstream>
 #include <glad/glad.h>
 #include <iostream>
+#include <sstream>
 
 Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath) {
   this->id = glCreateProgram();
-  uint32_t vert = this->compile(GL_VERTEX_SHADER, std::filesystem::current_path() / "shaders" / vertexPath);
-  uint32_t frag = this->compile(GL_FRAGMENT_SHADER, std::filesystem::current_path() / "shaders" / fragmentPath);
+  uint32_t vert = this->compile(GL_VERTEX_SHADER, vertexPath);
+  uint32_t frag = this->compile(GL_FRAGMENT_SHADER, fragmentPath);
 
   glAttachShader(this->id, vert);
   glAttachShader(this->id, frag);
