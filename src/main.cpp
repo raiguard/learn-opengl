@@ -134,9 +134,8 @@ int main()
   int width = 800;
   int height = 600;
 
-  bool rotating = false;
-
-  float rotation = 0.0f;
+  glm::vec3 speed(0.0f);
+  glm::vec3 orientation(0.0f);
 
   SDL_Event event;
   bool quit = false;
@@ -154,23 +153,44 @@ int main()
         }
       }
       else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_W)
-        rotating = true;
+        speed.x = 1.0f;
       else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_W)
-        rotating = false;
+        speed.x = 0.0f;
+      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_S)
+        speed.x = -1.0f;
+      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_S)
+        speed.x = 0.0f;
+      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_A)
+        speed.y = 1.0f;
+      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_A)
+        speed.y = 0.0f;
+      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_D)
+        speed.y = -1.0f;
+      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_D)
+        speed.y = 0.0f;
+      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_R)
+        speed.z = -1.0f;
+      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_R)
+        speed.z = 0.0f;
+      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_F)
+        speed.z = 1.0f;
+      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_F)
+        speed.z = 0.0f;
 
     if (quit)
       break;
 
-    if (rotating)
-      rotation += 1.0f;
+    orientation += speed;
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 view = glm::mat4(1.0f);
     // note that we're translating the scene in the reverse direction of where we want to move
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-    view = glm::rotate(view, glm::radians(rotation), glm::vec3(1.0f, 0.0f, 0.0f));
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -6.0f));
+    view = glm::rotate(view, glm::radians(orientation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+    view = glm::rotate(view, glm::radians(orientation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+    view = glm::rotate(view, glm::radians(orientation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(45.0f), float(width) / float(height), 0.1f, 100.0f);
