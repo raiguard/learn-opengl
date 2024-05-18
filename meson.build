@@ -7,9 +7,9 @@ glad = library('glad', 'glad/src/glad.c',
 
 glfw = dependency('glfw3')
 
-# c = run_command('scripts/find_sources.sh', check: true)
-# sources = c.stdout().strip().split('\n')
-executable('learn-opengl', 'src/main.cpp',
+c = run_command('scripts/find_sources.sh', check: true)
+sources = c.stdout().strip().split('\n')
+executable('learn-opengl', sources,
            include_directories: glad_includes,
            link_with: [glad],
            dependencies: [glfw],
