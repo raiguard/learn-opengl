@@ -1,41 +1,32 @@
 #include "src/shader.hpp"
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <cassert>
 #include <cmath>
+#include <format>
+#include <glad/glad.h>
 #include <iostream>
+#include <SDL.h>
 #include <stb_image.h>
 
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
-  glViewport(0, 0, width, height);
-}
+int main()
+{
+  SDL_SetHint(SDL_HINT_EVENT_LOGGING, "1");
+  SDL_SetHint(SDL_HINT_VIDEODRIVER, "wayland,x11");
+  if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+    throw std::runtime_error("Failed to initialize SDL");
 
-void processInput(GLFWwindow *window) {
-  if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-    glfwSetWindowShouldClose(window, true);
-}
+  SDL_GL_LoadLibrary(nullptr);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-int main() {
-  glfwInit();
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  SDL_Window* window = SDL_CreateWindow("Learn OpenGL", 0, 0, 800, 600,
+                                        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL);
+  if (!window)
+    throw std::runtime_error(SDL_GetError());
 
-  GLFWwindow *window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
-  if (window == NULL) {
-    std::cout << "Failed to create GLFW window" << std::endl;
-    glfwTerminate();
-    return -1;
-  }
-  glfwMakeContextCurrent(window);
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+  assert(context);
 
-  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-    std::cout << "Failed to initialize GLAD" << std::endl;
-    return -1;
-  }
-
-  glViewport(0, 0, 800, 600);
-
-  glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+  gladLoadGLLoader(SDL_GL_GetProcAddress);
+  std::cout << std::format("OpenGL version: {}", (const char*)(glGetString(GL_VERSION))) << std::endl;
 
   float vertices[] = {
       // positions          // colors           // texture coords
@@ -85,11 +76,24 @@ int main() {
     stbi_image_free(data);
   }
 
-  while (!glfwWindowShouldClose(window)) {
-    // Input
-    processInput(window);
+  SDL_Event event;
+  bool quit = false;
+  while (!quit)
+  {
+    while (SDL_PollEvent(&event))
+      if (event.type == SDL_QUIT)
+        quit = true;
+      else if (event.type == SDL_WINDOWEVENT)
+        if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+        {
+          int width, height;
+          SDL_GetWindowSizeInPixels(window, &width, &height);
+          glViewport(0, 0, width, height);
+        }
 
-    // Rendering commands here
+    if (quit)
+      break;
+
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -99,11 +103,11 @@ int main() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    // Finalize frame
-    glfwSwapBuffers(window);
-    glfwPollEvents();
+    SDL_GL_SwapWindow(window);
   }
 
-  glfwTerminate();
+  SDL_GL_DeleteContext(context);
+  SDL_DestroyWindow(window);
+  SDL_Quit();
   return 0;
 }

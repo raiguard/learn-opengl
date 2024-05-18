@@ -5,7 +5,8 @@
 #include <iostream>
 #include <sstream>
 
-Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath) {
+Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath)
+{
   this->id = glCreateProgram();
   uint32_t vert = this->compile(GL_VERTEX_SHADER, vertexPath);
   uint32_t frag = this->compile(GL_FRAGMENT_SHADER, fragmentPath);
@@ -19,21 +20,33 @@ Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath) {
   glDeleteShader(frag);
 }
 
-void Shader::use() { glUseProgram(this->id); }
+Shader::~Shader()
+{
+  glDeleteProgram(this->id);
+}
 
-void Shader::setBool(const std::string &name, bool value) const {
+void Shader::use()
+{
+  glUseProgram(this->id);
+}
+
+void Shader::setBool(const std::string &name, bool value) const
+{
   glUniform1i(glGetUniformLocation(this->id, name.c_str()), (int32_t)value);
 }
 
-void Shader::setInt(const std::string &name, int32_t value) const {
+void Shader::setInt(const std::string &name, int32_t value) const
+{
   glUniform1i(glGetUniformLocation(this->id, name.c_str()), value);
 }
 
-void Shader::setFloat(const std::string &name, float value) const {
+void Shader::setFloat(const std::string &name, float value) const
+{
   glUniform1f(glGetUniformLocation(this->id, name.c_str()), value);
 }
 
-uint32_t Shader::compile(uint32_t type, const std::string &filename) {
+uint32_t Shader::compile(uint32_t type, const std::string &filename)
+{
   std::stringstream buffer;
   buffer << std::ifstream(filename).rdbuf();
   std::string source = buffer.str();
@@ -45,7 +58,8 @@ uint32_t Shader::compile(uint32_t type, const std::string &filename) {
 
   int result;
   glGetShaderiv(id, GL_COMPILE_STATUS, &result);
-  if (!result) {
+  if (!result)
+  {
     int length;
     glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
     std::string message;
