@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <glm/glm.hpp>
 
 class Shader {
 public:
@@ -8,9 +9,11 @@ public:
   ~Shader();
 
   void use();
-  void setBool(const std::string &name, bool value) const;
-  void setInt(const std::string &name, int32_t value) const;
-  void setFloat(const std::string &name, float value) const;
+  void setBool(const std::string& name, bool value) const;
+  void setInt(const std::string& name, int32_t value) const;
+  void setFloat(const std::string& name, float value) const;
+
+  void setMat4(const std::string& name, glm::mat4 value) const;
 
   uint32_t id;
 private:
