@@ -6,6 +6,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_opengl3.h>
 #include <iostream>
 #include <SDL.h>
 #define STB_IMAGE_IMPLEMENTATION
@@ -50,6 +52,13 @@ int main()
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
   assert(context);
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplSDL2_InitForOpenGL(window, context);
+  ImGui_ImplOpenGL3_Init();
 
   gladLoadGLLoader(SDL_GL_GetProcAddress);
   std::cout << std::format("OpenGL version: {}", (const char*)(glGetString(GL_VERSION))) << std::endl;
@@ -142,8 +151,10 @@ int main()
 
   SDL_SetRelativeMouseMode(SDL_TRUE);
 
-  float yaw = 0.0f;
+  float yaw = -90.0f;
   float pitch = 0.0f;
+
+  bool mouseCaptured = true;
 
   SDL_Event event;
   bool quit = false;
@@ -152,6 +163,8 @@ int main()
     float mouseOffsetX = 0;
     float mouseOffsetY = 0;
     while (SDL_PollEvent(&event))
+    {
+      ImGui_ImplSDL2_ProcessEvent(&event);
       switch (event.type)
       {
       case SDL_QUIT:
@@ -166,14 +179,23 @@ int main()
       case SDL_MOUSEMOTION:
         mouseOffsetX += event.motion.xrel;
         mouseOffsetY -= event.motion.yrel;
+      case SDL_KEYDOWN:
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+        {
+          mouseCaptured = !mouseCaptured;
+          SDL_SetRelativeMouseMode(mouseCaptured ? SDL_TRUE : SDL_FALSE);
+        }
       }
+    }
 
     if (quit)
       break;
 
+    if (mouseCaptured)
     {
       const float sensitivity = 0.1f;
       yaw += mouseOffsetX * sensitivity;
+      yaw = std::fmod(yaw, 360.0f);
       pitch += mouseOffsetY * sensitivity;
 
       if (pitch > 89.0f)
@@ -188,16 +210,27 @@ int main()
       cameraOrientation = glm::normalize(direction);
     }
 
-    const float cameraSpeed = 0.05f;
-    const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
-    if (keyboardState[SDL_SCANCODE_W])
-      cameraPos += cameraOrientation * cameraSpeed;
-    if (keyboardState[SDL_SCANCODE_S])
-      cameraPos -= cameraOrientation * cameraSpeed;
-    if (keyboardState[SDL_SCANCODE_A])
-      cameraPos -= glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
-    if (keyboardState[SDL_SCANCODE_D])
-      cameraPos += glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
+    if (!ImGui::GetIO().WantCaptureKeyboard)
+    {
+      const float cameraSpeed = 0.05f;
+      const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
+      if (keyboardState[SDL_SCANCODE_W])
+        cameraPos += cameraOrientation * cameraSpeed;
+      if (keyboardState[SDL_SCANCODE_S])
+        cameraPos -= cameraOrientation * cameraSpeed;
+      if (keyboardState[SDL_SCANCODE_A])
+        cameraPos -= glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
+      if (keyboardState[SDL_SCANCODE_D])
+        cameraPos += glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
+      if (keyboardState[SDL_SCANCODE_LSHIFT])
+        cameraPos -= up * cameraSpeed;
+      if (keyboardState[SDL_SCANCODE_SPACE])
+        cameraPos += up * cameraSpeed;
+    }
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -228,6 +261,11 @@ int main()
     }
     glBindVertexArray(0);
 
+    ImGui::Text("yaw: %.3f", yaw);
+    ImGui::Text("pitch: %.3f", pitch);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
   }
 
