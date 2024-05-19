@@ -155,6 +155,7 @@ int main()
   float pitch = 0.0f;
 
   bool mouseCaptured = true;
+  bool ignoreNextMouseInput = false;
 
   SDL_Event event;
   bool quit = false;
@@ -173,18 +174,27 @@ int main()
       case SDL_WINDOWEVENT:
         if (event.window.event == SDL_WINDOWEVENT_RESIZED)
         {
+          ignoreNextMouseInput = true;
           SDL_GetWindowSizeInPixels(window, &width, &height);
           glViewport(0, 0, width, height);
         }
+        break;
       case SDL_MOUSEMOTION:
-        mouseOffsetX += event.motion.xrel;
-        mouseOffsetY -= event.motion.yrel;
+        if (ignoreNextMouseInput)
+          ignoreNextMouseInput = false;
+        else
+        {
+          mouseOffsetX += event.motion.xrel;
+          mouseOffsetY -= event.motion.yrel;
+        }
+        break;
       case SDL_KEYDOWN:
         if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
         {
           mouseCaptured = !mouseCaptured;
           SDL_SetRelativeMouseMode(mouseCaptured ? SDL_TRUE : SDL_FALSE);
         }
+        break;
       }
     }
 
@@ -194,8 +204,7 @@ int main()
     if (mouseCaptured)
     {
       const float sensitivity = 0.1f;
-      yaw += mouseOffsetX * sensitivity;
-      yaw = std::fmod(yaw, 360.0f);
+      yaw = std::fmod(yaw + (mouseOffsetX * sensitivity), 360);
       pitch += mouseOffsetY * sensitivity;
 
       if (pitch > 89.0f)
@@ -263,6 +272,7 @@ int main()
 
     ImGui::Text("yaw: %.3f", yaw);
     ImGui::Text("pitch: %.3f", pitch);
+    ImGui::Text("pos: %.3f,%.3f,%.3f", cameraPos.x, cameraPos.y, cameraPos.z);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
