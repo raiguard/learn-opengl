@@ -34,6 +34,7 @@ unsigned int loadTexture(const char* path, int format)
 
 int main()
 {
+  // SDL_SetHint(SDL_HINT_EVENT_LOGGING, "2");
   SDL_SetHint(SDL_HINT_VIDEODRIVER, "wayland,x11");
   if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
     throw std::runtime_error("Failed to initialize SDL");
@@ -43,6 +44,7 @@ int main()
 
   SDL_Window* window = SDL_CreateWindow("Learn OpenGL", 0, 0, 800, 600,
                                         SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL);
+
   if (!window)
     throw std::runtime_error(SDL_GetError());
 
@@ -134,63 +136,73 @@ int main()
   int width = 800;
   int height = 600;
 
-  glm::vec3 speed(0.0f);
-  glm::vec3 orientation(0.0f);
+  glm::vec3 cameraPos(0.0f, 0.0f, 3.0f);
+  glm::vec3 cameraOrientation(0.0f, 0.0f, -1.0f);
+  glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+  SDL_SetRelativeMouseMode(SDL_TRUE);
+
+  float yaw = 0.0f;
+  float pitch = 0.0f;
 
   SDL_Event event;
   bool quit = false;
   while (!quit)
   {
+    float mouseOffsetX = 0;
+    float mouseOffsetY = 0;
     while (SDL_PollEvent(&event))
-      if (event.type == SDL_QUIT)
-        quit = true;
-      else if (event.type == SDL_WINDOWEVENT)
+      switch (event.type)
       {
+      case SDL_QUIT:
+        quit = true;
+        break;
+      case SDL_WINDOWEVENT:
         if (event.window.event == SDL_WINDOWEVENT_RESIZED)
         {
           SDL_GetWindowSizeInPixels(window, &width, &height);
           glViewport(0, 0, width, height);
         }
+      case SDL_MOUSEMOTION:
+        mouseOffsetX += event.motion.xrel;
+        mouseOffsetY -= event.motion.yrel;
       }
-      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_W)
-        speed.x = 1.0f;
-      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_W)
-        speed.x = 0.0f;
-      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_S)
-        speed.x = -1.0f;
-      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_S)
-        speed.x = 0.0f;
-      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_A)
-        speed.y = 1.0f;
-      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_A)
-        speed.y = 0.0f;
-      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_D)
-        speed.y = -1.0f;
-      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_D)
-        speed.y = 0.0f;
-      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_R)
-        speed.z = -1.0f;
-      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_R)
-        speed.z = 0.0f;
-      else if (event.type == SDL_KEYDOWN && event.key.keysym.scancode == SDL_SCANCODE_F)
-        speed.z = 1.0f;
-      else if (event.type == SDL_KEYUP && event.key.keysym.scancode == SDL_SCANCODE_F)
-        speed.z = 0.0f;
 
     if (quit)
       break;
 
-    orientation += speed;
+    {
+      const float sensitivity = 0.1f;
+      yaw += mouseOffsetX * sensitivity;
+      pitch += mouseOffsetY * sensitivity;
+
+      if (pitch > 89.0f)
+        pitch = 89.0f;
+      if (pitch < -89.0f)
+        pitch = -89.0f;
+
+      glm::vec3 direction;
+      direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+      direction.y = sin(glm::radians(pitch));
+      direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+      cameraOrientation = glm::normalize(direction);
+    }
+
+    const float cameraSpeed = 0.05f;
+    const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
+    if (keyboardState[SDL_SCANCODE_W])
+      cameraPos += cameraOrientation * cameraSpeed;
+    if (keyboardState[SDL_SCANCODE_S])
+      cameraPos -= cameraOrientation * cameraSpeed;
+    if (keyboardState[SDL_SCANCODE_A])
+      cameraPos -= glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
+    if (keyboardState[SDL_SCANCODE_D])
+      cameraPos += glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::mat4 view = glm::mat4(1.0f);
-    // note that we're translating the scene in the reverse direction of where we want to move
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -6.0f));
-    view = glm::rotate(view, glm::radians(orientation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-    view = glm::rotate(view, glm::radians(orientation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-    view = glm::rotate(view, glm::radians(orientation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraOrientation, up);
 
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(45.0f), float(width) / float(height), 0.1f, 100.0f);
