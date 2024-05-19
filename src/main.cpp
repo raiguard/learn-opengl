@@ -1,4 +1,5 @@
-#include "src/shader.hpp"
+#include "camera.hpp"
+#include "shader.hpp"
 #include <cassert>
 #include <cmath>
 #include <format>
@@ -119,7 +120,8 @@ int main()
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
-  Shader shader("shaders/triangle.vert", "shaders/triangle.frag");
+
+  Shader shader("shaders/boxface.vert", "shaders/boxface.frag");
   shader.use();
   shader.setInt("texture1", 0);
   shader.setInt("texture2", 1);
@@ -145,25 +147,16 @@ int main()
   int width = 800;
   int height = 600;
 
-  glm::vec3 cameraPos(0.0f, 0.0f, 3.0f);
-  glm::vec3 cameraOrientation(0.0f, 0.0f, -1.0f);
-  glm::vec3 up(0.0f, 1.0f, 0.0f);
+  Camera camera;
+  bool cameraFocused = true;
+  bool ignoreNextMouseInput = false;
 
   SDL_SetRelativeMouseMode(SDL_TRUE);
-
-  float yaw = -90.0f;
-  float pitch = 0.0f;
-  float fov = 45.0f;
-
-  bool mouseCaptured = true;
-  bool ignoreNextMouseInput = false;
 
   SDL_Event event;
   bool quit = false;
   while (!quit)
   {
-    float mouseOffsetX = 0;
-    float mouseOffsetY = 0;
     while (SDL_PollEvent(&event))
     {
       ImGui_ImplSDL2_ProcessEvent(&event);
@@ -183,20 +176,18 @@ int main()
       case SDL_MOUSEMOTION:
         if (ignoreNextMouseInput)
           ignoreNextMouseInput = false;
-        else
-        {
-          mouseOffsetX += event.motion.xrel;
-          mouseOffsetY -= event.motion.yrel;
-        }
+        else if (cameraFocused && !ImGui::GetIO().WantCaptureMouse)
+          camera.processMouseMovement(event.motion.xrel, -event.motion.yrel);
         break;
       case SDL_MOUSEWHEEL:
-        fov = std::clamp(fov - (event.wheel.y * 2), 5.0f, 45.0f);
+        if (cameraFocused && !ImGui::GetIO().WantCaptureMouse)
+          camera.processMouseScroll(event.wheel.y);
         break;
       case SDL_KEYDOWN:
-        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+        if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE && !ImGui::GetIO().WantCaptureKeyboard)
         {
-          mouseCaptured = !mouseCaptured;
-          SDL_SetRelativeMouseMode(mouseCaptured ? SDL_TRUE : SDL_FALSE);
+          cameraFocused = !cameraFocused;
+          SDL_SetRelativeMouseMode(cameraFocused ? SDL_TRUE : SDL_FALSE);
         }
         break;
       }
@@ -205,40 +196,21 @@ int main()
     if (quit)
       break;
 
-    if (mouseCaptured)
+    if (cameraFocused && !ImGui::GetIO().WantCaptureKeyboard)
     {
-      const float sensitivity = 0.1f;
-      yaw = std::fmod(yaw + (mouseOffsetX * sensitivity), 360);
-      pitch += mouseOffsetY * sensitivity;
-
-      if (pitch > 89.0f)
-        pitch = 89.0f;
-      if (pitch < -89.0f)
-        pitch = -89.0f;
-
-      glm::vec3 direction;
-      direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-      direction.y = sin(glm::radians(pitch));
-      direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-      cameraOrientation = glm::normalize(direction);
-    }
-
-    if (!ImGui::GetIO().WantCaptureKeyboard)
-    {
-      const float cameraSpeed = 0.05f;
       const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
       if (keyboardState[SDL_SCANCODE_W])
-        cameraPos += cameraOrientation * cameraSpeed;
-      if (keyboardState[SDL_SCANCODE_S])
-        cameraPos -= cameraOrientation * cameraSpeed;
+        camera.processKeyboard(CameraMovement::FORWARD);
       if (keyboardState[SDL_SCANCODE_A])
-        cameraPos -= glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
+        camera.processKeyboard(CameraMovement::LEFT);
+      if (keyboardState[SDL_SCANCODE_S])
+        camera.processKeyboard(CameraMovement::BACKWARD);
       if (keyboardState[SDL_SCANCODE_D])
-        cameraPos += glm::normalize(glm::cross(cameraOrientation, up)) * cameraSpeed;
+        camera.processKeyboard(CameraMovement::RIGHT);
       if (keyboardState[SDL_SCANCODE_LSHIFT])
-        cameraPos -= up * cameraSpeed;
+        camera.processKeyboard(CameraMovement::DOWN);
       if (keyboardState[SDL_SCANCODE_SPACE])
-        cameraPos += up * cameraSpeed;
+        camera.processKeyboard(CameraMovement::UP);
     }
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -248,12 +220,10 @@ int main()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraOrientation, up);
-
     glm::mat4 projection;
-    projection = glm::perspective(glm::radians(fov), float(width) / float(height), 0.1f, 100.0f);
+    projection = glm::perspective(glm::radians(camera.zoom), float(width) / float(height), 0.1f, 100.0f);
 
-    shader.setMat4("view", view);
+    shader.setMat4("view", camera.getViewMatrix());
     shader.setMat4("projection", projection);
 
     glActiveTexture(GL_TEXTURE0);
@@ -274,9 +244,9 @@ int main()
     }
     glBindVertexArray(0);
 
-    ImGui::Text("yaw: %.3f", yaw);
-    ImGui::Text("pitch: %.3f", pitch);
-    ImGui::Text("pos: %.3f,%.3f,%.3f", cameraPos.x, cameraPos.y, cameraPos.z);
+    ImGui::Text("yaw: %.3f", camera.yaw);
+    ImGui::Text("pitch: %.3f", camera.pitch);
+    ImGui::Text("pos: %.3f,%.3f,%.3f", camera.position.x, camera.position.y, camera.position.z);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
