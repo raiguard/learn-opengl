@@ -13,5 +13,5 @@ sources = c.stdout().strip().split('\n')
 executable('learn-opengl', sources,
            include_directories: [glad_includes],
            link_with: [glad],
-           dependencies: [sdl, imgui],
-           cpp_args: '-Werror')
+           dependencies: [imgui, sdl],
+           cpp_args: ['-Wall', '-Wimplicit-fallthrough'])
