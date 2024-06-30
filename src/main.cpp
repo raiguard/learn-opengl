@@ -128,8 +128,6 @@ int main()
 
   SDL_SetRelativeMouseMode(SDL_TRUE);
 
-  glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-
   ImVec4 lightColor(1.0f, 1.0f, 1.0f, 1.0f); // White
   ImVec4 cubeColor(1.0f, 0.5f, 0.31f, 1.0f); // Coral
 
@@ -221,6 +219,15 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), float(width) / float(height), 0.1f, 100.0f);
     glm::mat4 view = camera.getViewMatrix();
 
+    glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+    static bool rotateLight = false;
+    float angle = float(SDL_GetTicks()) / 1000;
+    if (rotateLight)
+    {
+      lightPos.x *= cos(angle);
+      lightPos.z *= sin(angle);
+    }
+
     // activate the shader and set uniforms
     lightingShader.use();
     lightingShader.setVec3("objectColor", cubeColor.x, cubeColor.y, cubeColor.z);
@@ -232,12 +239,9 @@ int main()
     lightingShader.setMat4("projection", projection);
     lightingShader.setMat4("view", view);
     glm::mat4 model(1.0f);
-    static bool rotateCube = false;
+    static bool rotateCube = true;
     if (rotateCube)
-    {
-      float angle = 20.0f * float(SDL_GetTicks()) / 1000;
-      model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    }
+      model = glm::rotate(model, glm::radians(20.0f * angle), glm::vec3(1.0f, 0.3f, 0.5f));
     lightingShader.setMat4("model", model);
 
     // render the cube
@@ -276,6 +280,7 @@ int main()
     ImGui::Text("Light color:");
     ImGui::SameLine();
     ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+    ImGui::Checkbox("Move light", &rotateLight);
     static bool showDemoWindow = false;
     ImGui::Checkbox("Show demo window", &showDemoWindow);
     ImGui::End();
