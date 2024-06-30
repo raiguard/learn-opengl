@@ -247,6 +247,8 @@ int main()
     ImGui::Text("yaw: %.3f", camera.yaw);
     ImGui::Text("pitch: %.3f", camera.pitch);
     ImGui::Text("pos: %.3f,%.3f,%.3f", camera.position.x, camera.position.y, camera.position.z);
+    ImGuiIO &io = ImGui::GetIO();
+    ImGui::Text("Render: %.1f FPS (%.3f ms/frame)", io.Framerate, 1000.0f / io.Framerate);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
