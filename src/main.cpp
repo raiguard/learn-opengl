@@ -230,9 +230,17 @@ int main()
 
     // activate the shader and set uniforms
     lightingShader.use();
-    lightingShader.setVec3("objectColor", cubeColor.x, cubeColor.y, cubeColor.z);
-    lightingShader.setVec3("lightColor",  lightColor.x, lightColor.y, lightColor.z);
-    lightingShader.setVec3("lightPos", lightPos);
+    // material
+    lightingShader.setVec3("material.ambient", cubeColor.x, cubeColor.y, cubeColor.z);
+    lightingShader.setVec3("material.diffuse", cubeColor.x, cubeColor.y, cubeColor.z);
+    lightingShader.setVec3("material.specular", 0.5f, 0.5f, 0.5f);
+    lightingShader.setFloat("material.shininess", 32.0f);
+    // light
+    lightingShader.setVec3("light.ambient",  0.2f, 0.2f, 0.2f);
+    lightingShader.setVec3("light.diffuse",  lightColor.x * 0.5f, lightColor.y * 0.5f, lightColor.z * 0.5f); // darken diffuse light a bit
+    lightingShader.setVec3("light.specular", lightColor.x, lightColor.y, lightColor.z);
+    lightingShader.setVec3("light.position", lightPos);
+    // camera
     lightingShader.setVec3("viewPos", camera.position);
 
     // world transformation
