@@ -56,6 +56,11 @@ void Shader::setVec3(const std::string& name, float x, float y, float z) const
   glUniform3f(glGetUniformLocation(this->id, name.c_str()), x, y, z);
 }
 
+void Shader::setVec3(const std::string& name, glm::vec3 value) const
+{
+  glUniform3fv(glGetUniformLocation(this->id, name.c_str()), 1, glm::value_ptr(value));
+}
+
 uint32_t Shader::compile(uint32_t type, const std::string& filename)
 {
   std::stringstream buffer;
