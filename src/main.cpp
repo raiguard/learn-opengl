@@ -162,7 +162,9 @@ int main()
   SDL_Event event;
   bool quit = false;
 
-  Material& selectedMaterial = materials["greenRubber"];
+  Material selectedMaterial = materials["greenRubber"];
+  uint64_t tick = 0;
+  bool tickPaused = false;
 
   while (!quit)
   {
@@ -181,7 +183,8 @@ int main()
 
     while (SDL_PollEvent(&event))
     {
-      ImGui_ImplSDL2_ProcessEvent(&event);
+      if (!cameraFocused)
+        ImGui_ImplSDL2_ProcessEvent(&event);
       switch (event.type)
       {
       case SDL_QUIT:
@@ -220,6 +223,9 @@ int main()
 
     while (accumulator >= timestep)
     {
+      if (!tickPaused)
+        tick++;
+
       if (cameraFocused && !ImGui::GetIO().WantCaptureKeyboard)
       {
         const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
@@ -252,7 +258,7 @@ int main()
 
     glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
     static bool rotateLight = false;
-    float angle = float(SDL_GetTicks()) / 1000;
+    float angle = float(tick) / 1000;
     if (rotateLight)
     {
       lightPos.x *= cos(angle);
@@ -265,7 +271,7 @@ int main()
     lightingShader.setVec3("material.ambient", selectedMaterial.ambient);
     lightingShader.setVec3("material.diffuse", selectedMaterial.diffuse);
     lightingShader.setVec3("material.specular", selectedMaterial.specular);
-    lightingShader.setFloat("material.shininess", selectedMaterial.shininess * 32.0f);
+    lightingShader.setFloat("material.shininess", selectedMaterial.shininess * 128.0f);
     // light
     lightingShader.setVec3("light.ambient",  1.0f, 1.0f, 1.0f);
     lightingShader.setVec3("light.diffuse",  lightColor.x * 0.5f, lightColor.y * 0.5f, lightColor.z * 0.5f); // darken diffuse light a bit
@@ -304,34 +310,36 @@ int main()
     // debug GUI
     ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f));
     ImGui::Begin("Debug", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav);
+    static bool showDemoWindow = false;
+    ImGui::Checkbox("Show demo window", &showDemoWindow);
+    ImGui::SeparatorText("Camera");
     ImGui::Text("yaw: %.3f", camera.yaw);
     ImGui::Text("pitch: %.3f", camera.pitch);
     ImGui::Text("pos: %.3f,%.3f,%.3f", camera.position.x, camera.position.y, camera.position.z);
+    ImGui::SeparatorText("Graphics");
     ImGuiIO &io = ImGui::GetIO();
     ImGui::Text("Render: %.1f FPS (%.3f ms/frame)", io.Framerate, 1000.0f / io.Framerate);
     static bool useVsync = true;
     if (ImGui::Checkbox("Use vsync", &useVsync))
       SDL_GL_SetSwapInterval(useVsync ? 1 : 0);
+    ImGui::SeparatorText("Simulation");
+    ImGui::Text("Tick: %lu", tick);
+    ImGui::Checkbox("Pause", &tickPaused);
     ImGui::Checkbox("Rotate cube", &rotateCube);
-    // ImGui::Text("Cube color:");
-    // ImGui::SameLine();
-    // ImGui::ColorEdit3("Cube color", (float*)&cubeColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+    ImGui::Checkbox("Move light", &rotateLight);
+    ImGui::SeparatorText("Lighting");
     if (ImGui::Button("Cube material..."))
       ImGui::OpenPopup("Select cube material");
     if (ImGui::BeginPopup("Select cube material"))
     {
-      for (auto& [name, material] : materials)
+      for (auto&& [name, material] : materials)
         if (ImGui::Selectable(name.c_str()))
           selectedMaterial = material;
       ImGui::EndPopup();
     }
-
     ImGui::Text("Light color:");
     ImGui::SameLine();
     ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
-    ImGui::Checkbox("Move light", &rotateLight);
-    static bool showDemoWindow = false;
-    ImGui::Checkbox("Show demo window", &showDemoWindow);
     ImGui::End();
 
     if (showDemoWindow)
