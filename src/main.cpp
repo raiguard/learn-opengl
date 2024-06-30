@@ -157,7 +157,8 @@ int main()
 
   SDL_SetRelativeMouseMode(SDL_TRUE);
 
-  ImVec4 lightColor(1.0f, 1.0f, 1.0f, 1.0f);
+  glm::vec4 lightColor(1.0f);
+  glm::vec4 backgroundColor(0.15f);
 
   SDL_Event event;
   bool quit = false;
@@ -250,7 +251,7 @@ int main()
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), float(width) / float(height), 0.1f, 100.0f);
@@ -337,9 +338,8 @@ int main()
           selectedMaterial = material;
       ImGui::EndPopup();
     }
-    ImGui::Text("Light color:");
-    ImGui::SameLine();
-    ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+    ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs);
+    ImGui::ColorEdit3("Background color", (float*)&backgroundColor, ImGuiColorEditFlags_NoInputs);
     ImGui::End();
 
     if (showDemoWindow)
