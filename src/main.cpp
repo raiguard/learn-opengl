@@ -127,6 +127,9 @@ int main()
 
   glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
+  ImVec4 lightColor(1.0f, 1.0f, 1.0f, 1.0f); // White
+  ImVec4 cubeColor(1.0f, 0.5f, 0.31f, 1.0f); // Coral
+
   SDL_Event event;
   bool quit = false;
   while (!quit)
@@ -217,8 +220,8 @@ int main()
 
     // activate the shader and set uniforms
     lightingShader.use();
-    lightingShader.setVec3("objectColor", 1.0f, 0.5f, 0.31f); // Coral
-    lightingShader.setVec3("lightColor",  1.0f, 1.0f, 1.0f);  // White
+    lightingShader.setVec3("objectColor", cubeColor.x, cubeColor.y, cubeColor.z);
+    lightingShader.setVec3("lightColor",  lightColor.x, lightColor.y, lightColor.z);
 
     // world transformation
     glm::mat4 model(1.0f);
@@ -232,6 +235,7 @@ int main()
 
     // also draw the lamp object
     lightCubeShader.use();
+    lightCubeShader.setVec3("lightColor",  lightColor.x, lightColor.y, lightColor.z);
     lightCubeShader.setMat4("projection", projection);
     lightCubeShader.setMat4("view", view);
     model = glm::mat4(1.0f);
@@ -251,6 +255,12 @@ int main()
     static bool useVsync = true;
     if (ImGui::Checkbox("Use vsync", &useVsync))
       SDL_GL_SetSwapInterval(useVsync ? 1 : 0);
+    ImGui::Text("Cube color:");
+    ImGui::SameLine();
+    ImGui::ColorEdit3("Cube color", (float*)&cubeColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+    ImGui::Text("Light color:");
+    ImGui::SameLine();
+    ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
