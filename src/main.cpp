@@ -1,6 +1,7 @@
 #include "camera.hpp"
 #include "shader.hpp"
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <format>
 #include <glad/glad.h>
@@ -11,6 +12,7 @@
 #include <imgui_impl_opengl3.h>
 #include <iostream>
 #include <SDL.h>
+#include <thread>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -157,6 +159,19 @@ int main()
   bool quit = false;
   while (!quit)
   {
+    using Clock = std::chrono::high_resolution_clock;
+    using namespace std::chrono_literals;
+
+    static Clock::time_point lastFrameTime = Clock::now();
+    static Clock::duration accumulator;
+    static constexpr std::chrono::nanoseconds timestep(1000000000 / 1000);
+
+    Clock::time_point currentTime = Clock::now();
+    Clock::duration frameTime = currentTime - lastFrameTime;
+    lastFrameTime = currentTime;
+
+    accumulator += frameTime;
+
     while (SDL_PollEvent(&event))
     {
       ImGui_ImplSDL2_ProcessEvent(&event);
@@ -196,21 +211,26 @@ int main()
     if (quit)
       break;
 
-    if (cameraFocused && !ImGui::GetIO().WantCaptureKeyboard)
+    while (accumulator >= timestep)
     {
-      const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
-      if (keyboardState[SDL_SCANCODE_W])
-        camera.processKeyboard(CameraMovement::FORWARD);
-      if (keyboardState[SDL_SCANCODE_A])
-        camera.processKeyboard(CameraMovement::LEFT);
-      if (keyboardState[SDL_SCANCODE_S])
-        camera.processKeyboard(CameraMovement::BACKWARD);
-      if (keyboardState[SDL_SCANCODE_D])
-        camera.processKeyboard(CameraMovement::RIGHT);
-      if (keyboardState[SDL_SCANCODE_LSHIFT])
-        camera.processKeyboard(CameraMovement::DOWN);
-      if (keyboardState[SDL_SCANCODE_SPACE])
-        camera.processKeyboard(CameraMovement::UP);
+      if (cameraFocused && !ImGui::GetIO().WantCaptureKeyboard)
+      {
+        const Uint8* keyboardState = SDL_GetKeyboardState(nullptr);
+        if (keyboardState[SDL_SCANCODE_W])
+          camera.processKeyboard(CameraMovement::FORWARD);
+        if (keyboardState[SDL_SCANCODE_A])
+          camera.processKeyboard(CameraMovement::LEFT);
+        if (keyboardState[SDL_SCANCODE_S])
+          camera.processKeyboard(CameraMovement::BACKWARD);
+        if (keyboardState[SDL_SCANCODE_D])
+          camera.processKeyboard(CameraMovement::RIGHT);
+        if (keyboardState[SDL_SCANCODE_LSHIFT])
+          camera.processKeyboard(CameraMovement::DOWN);
+        if (keyboardState[SDL_SCANCODE_SPACE])
+          camera.processKeyboard(CameraMovement::UP);
+      }
+
+      accumulator -= timestep;
     }
 
     ImGui_ImplOpenGL3_NewFrame();
@@ -249,10 +269,19 @@ int main()
     ImGui::Text("pos: %.3f,%.3f,%.3f", camera.position.x, camera.position.y, camera.position.z);
     ImGuiIO &io = ImGui::GetIO();
     ImGui::Text("Render: %.1f FPS (%.3f ms/frame)", io.Framerate, 1000.0f / io.Framerate);
+    static bool useVsync = true;
+    if (ImGui::Checkbox("Use vsync", &useVsync))
+      SDL_GL_SetSwapInterval(useVsync ? 1 : 0);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
+
+    // Cap framerate at max simulation speed
+    std::chrono::duration thisFrameTime = Clock::now() - lastFrameTime;
+    Clock::duration timeToSleep = timestep - accumulator - thisFrameTime;
+    if (timeToSleep > Clock::duration::zero())
+      std::this_thread::sleep_for(timeToSleep);
   }
 
   SDL_GL_DeleteContext(context);

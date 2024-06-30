@@ -7,11 +7,12 @@ glad = library('glad', 'libraries/glad/src/glad.c',
 
 imgui = dependency('imgui')
 sdl = dependency('sdl2')
+glm = dependency('glm')
 
 c = run_command('scripts/find_sources.sh', check: true)
 sources = c.stdout().strip().split('\n')
 executable('learn-opengl', sources,
            include_directories: [glad_includes],
            link_with: [glad],
-           dependencies: [imgui, sdl],
+           dependencies: [imgui, sdl, glm],
            cpp_args: ['-Wall', '-Wimplicit-fallthrough'])
