@@ -272,8 +272,15 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), float(width) / float(height), 0.1f, 100.0f);
     glm::mat4 view = camera.getViewMatrix();
 
+    glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+    static bool rotateLight = false;
     float angle = float(tick) / 1000;
-    glm::vec3 lightPos(0.0f, 1.0f * sin(angle), 2.0f * cos(angle));
+    if (rotateLight)
+    {
+      lightPos.x = 0.0f;
+      lightPos.y *= sin(angle);
+      lightPos.z *= cos(angle);
+    }
 
     // activate the shader and set uniforms
     lightingShader.use();
@@ -362,6 +369,7 @@ int main()
     ImGui::Text("Tick: %lu", tick);
     ImGui::Checkbox("Pause", &tickPaused);
     ImGui::Checkbox("Rotate cube", &rotateCube);
+    ImGui::Checkbox("Rotate light", &rotateLight);
     ImGui::SeparatorText("Lighting");
     ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs);
     ImGui::ColorEdit3("Background color", (float*)&backgroundColor, ImGuiColorEditFlags_NoInputs);
