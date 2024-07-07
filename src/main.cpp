@@ -272,14 +272,8 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), float(width) / float(height), 0.1f, 100.0f);
     glm::mat4 view = camera.getViewMatrix();
 
-    glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-    static bool pointLight = false;
     float angle = float(tick) / 1000;
-    if (pointLight)
-    {
-      lightPos.x *= cos(angle);
-      lightPos.z *= sin(angle);
-    }
+    glm::vec3 lightPos(0.0f, 1.0f * sin(angle), 2.0f * cos(angle));
 
     // activate the shader and set uniforms
     lightingShader.use();
@@ -289,13 +283,10 @@ int main()
     lightingShader.setVec3("light.ambient",  0.2f, 0.2f, 0.2f);
     lightingShader.setVec3("light.diffuse",  lightColor.x * 0.7f, lightColor.y * 0.7f, lightColor.z * 0.7f); // darken diffuse light a bit
     lightingShader.setVec3("light.specular", lightColor.x, lightColor.y, lightColor.z);
-    // lightingShader.setFloat("light.constant",  1.0f);
-    // lightingShader.setFloat("light.linear",    0.09f);
-    // lightingShader.setFloat("light.quadratic", 0.032f);
-    if (pointLight)
-      lightingShader.setVec4("light.origin", glm::vec4(lightPos, 1.0f));
-    else
-      lightingShader.setVec4("light.origin", -0.2f, -1.0f, -0.3f, 0.0f);
+    lightingShader.setFloat("light.constant",  1.0f);
+    lightingShader.setFloat("light.linear",    0.09f);
+    lightingShader.setFloat("light.quadratic", 0.032f);
+    lightingShader.setVec3("light.origin", glm::vec3(lightPos));
     // camera
     lightingShader.setVec3("viewPos", camera.position);
 
@@ -372,7 +363,6 @@ int main()
     ImGui::Checkbox("Pause", &tickPaused);
     ImGui::Checkbox("Rotate cube", &rotateCube);
     ImGui::SeparatorText("Lighting");
-    ImGui::Checkbox("Point light", &pointLight);
     ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs);
     ImGui::ColorEdit3("Background color", (float*)&backgroundColor, ImGuiColorEditFlags_NoInputs);
     ImGui::End();
