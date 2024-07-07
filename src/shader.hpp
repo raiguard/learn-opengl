@@ -16,6 +16,8 @@ public:
   void setMat4(const std::string& name, glm::mat4 value) const;
   void setVec3(const std::string& name, float x, float y, float z) const;
   void setVec3(const std::string& name, glm::vec3 value) const;
+  void setVec4(const std::string& name, float x, float y, float z, float w) const;
+  void setVec4(const std::string& name, glm::vec4 value) const;
 
   uint32_t id;
 private:

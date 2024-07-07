@@ -273,9 +273,9 @@ int main()
     glm::mat4 view = camera.getViewMatrix();
 
     glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-    static bool rotateLight = false;
+    static bool pointLight = false;
     float angle = float(tick) / 1000;
-    if (rotateLight)
+    if (pointLight)
     {
       lightPos.x *= cos(angle);
       lightPos.z *= sin(angle);
@@ -287,39 +287,64 @@ int main()
     lightingShader.setFloat("material.shininess", 64.0f);
     // light
     lightingShader.setVec3("light.ambient",  0.2f, 0.2f, 0.2f);
-    lightingShader.setVec3("light.diffuse",  lightColor.x * 0.5f, lightColor.y * 0.5f, lightColor.z * 0.5f); // darken diffuse light a bit
+    lightingShader.setVec3("light.diffuse",  lightColor.x * 0.7f, lightColor.y * 0.7f, lightColor.z * 0.7f); // darken diffuse light a bit
     lightingShader.setVec3("light.specular", lightColor.x, lightColor.y, lightColor.z);
-    lightingShader.setVec3("light.position", lightPos);
+    // lightingShader.setFloat("light.constant",  1.0f);
+    // lightingShader.setFloat("light.linear",    0.09f);
+    // lightingShader.setFloat("light.quadratic", 0.032f);
+    if (pointLight)
+      lightingShader.setVec4("light.origin", glm::vec4(lightPos, 1.0f));
+    else
+      lightingShader.setVec4("light.origin", -0.2f, -1.0f, -0.3f, 0.0f);
     // camera
     lightingShader.setVec3("viewPos", camera.position);
 
     // world transformation
     lightingShader.setMat4("projection", projection);
     lightingShader.setMat4("view", view);
-    glm::mat4 model(1.0f);
+
+    static glm::vec3 cubePositions[] = {
+        glm::vec3( 0.0f,  0.0f,  0.0f),
+        glm::vec3( 2.0f,  5.0f, -15.0f),
+        glm::vec3(-1.5f, -2.2f, -2.5f),
+        glm::vec3(-3.8f, -2.0f, -12.3f),
+        glm::vec3( 2.4f, -0.4f, -3.5f),
+        glm::vec3(-1.7f,  3.0f, -7.5f),
+        glm::vec3( 1.3f, -2.0f, -2.5f),
+        glm::vec3( 1.5f,  2.0f, -2.5f),
+        glm::vec3( 1.5f,  0.2f, -1.5f),
+        glm::vec3(-1.3f,  1.0f, -1.5f)
+    };
+
     static bool rotateCube = true;
-    if (rotateCube)
-      model = glm::rotate(model, glm::radians(20.0f * angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    lightingShader.setMat4("model", model);
+    for (unsigned int i = 0; i < 10; i++)
+    {
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, cubePositions[i]);
+        if (rotateCube)
+          model = glm::rotate(model, glm::radians(angle * i), glm::vec3(1.0f, 0.3f, 0.5f));
+        lightingShader.setMat4("model", model);
 
-    // bind diffuse map
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, diffuseMap);
+        // bind diffuse map
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
-    // bind specular map
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, specularMap);
+        // bind specular map
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, specularMap);
 
-    // render the cube
-    glBindVertexArray(cubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+        // render the cube
+        glBindVertexArray(cubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
+
 
     // also draw the lamp object
     lightCubeShader.use();
     lightCubeShader.setVec3("lightColor",  lightColor.x, lightColor.y, lightColor.z);
     lightCubeShader.setMat4("projection", projection);
     lightCubeShader.setMat4("view", view);
-    model = glm::mat4(1.0f);
+    glm::mat4 model(1.0f);
     model = glm::translate(model, lightPos);
     model = glm::scale(model, glm::vec3(0.2f));
     lightCubeShader.setMat4("model", model);
@@ -346,8 +371,8 @@ int main()
     ImGui::Text("Tick: %lu", tick);
     ImGui::Checkbox("Pause", &tickPaused);
     ImGui::Checkbox("Rotate cube", &rotateCube);
-    ImGui::Checkbox("Move light", &rotateLight);
     ImGui::SeparatorText("Lighting");
+    ImGui::Checkbox("Point light", &pointLight);
     ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs);
     ImGui::ColorEdit3("Background color", (float*)&backgroundColor, ImGuiColorEditFlags_NoInputs);
     ImGui::End();
