@@ -61,6 +61,26 @@ float vertices[] = {
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 };
 
+glm::vec3 pointLightPositions[] = {
+	glm::vec3( 0.7f,  0.2f,  2.0f),
+	glm::vec3( 2.3f, -3.3f, -4.0f),
+	glm::vec3(-4.0f,  2.0f, -12.0f),
+	glm::vec3( 0.0f,  0.0f, -3.0f)
+};
+
+glm::vec3 cubePositions[] = {
+  glm::vec3( 0.0f,  0.0f,  0.0f),
+  glm::vec3( 2.0f,  5.0f, -15.0f),
+  glm::vec3(-1.5f, -2.2f, -2.5f),
+  glm::vec3(-3.8f, -2.0f, -12.3f),
+  glm::vec3( 2.4f, -0.4f, -3.5f),
+  glm::vec3(-1.7f,  3.0f, -7.5f),
+  glm::vec3( 1.3f, -2.0f, -2.5f),
+  glm::vec3( 1.5f,  2.0f, -2.5f),
+  glm::vec3( 1.5f,  0.2f, -1.5f),
+  glm::vec3(-1.3f,  1.0f, -1.5f)
+};
+
 unsigned int loadTexture(char const * path)
 {
   unsigned int textureID;
@@ -70,7 +90,7 @@ unsigned int loadTexture(char const * path)
   unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
   if (data)
   {
-    GLenum format;
+    GLenum format = GL_RGB;
     if (nrComponents == 1)
       format = GL_RED;
     else if (nrComponents == 3)
@@ -272,32 +292,28 @@ int main()
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), float(width) / float(height), 0.1f, 100.0f);
     glm::mat4 view = camera.getViewMatrix();
 
-    glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
-    static bool rotateLight = false;
-    float angle = float(tick) / 1000;
-    if (rotateLight)
-    {
-      lightPos.x = 0.0f;
-      lightPos.y *= sin(angle);
-      lightPos.z *= cos(angle);
-    }
-
     // activate the shader and set uniforms
     lightingShader.use();
     // material
     lightingShader.setFloat("material.shininess", 64.0f);
-    // light
-    lightingShader.setVec3("light.ambient",  0.2f, 0.2f, 0.2f);
-    lightingShader.setVec3("light.diffuse",  lightColor.x * 0.7f, lightColor.y * 0.7f, lightColor.z * 0.7f); // darken diffuse light a bit
-    lightingShader.setVec3("light.specular", lightColor.x, lightColor.y, lightColor.z);
-    lightingShader.setFloat("light.constant",  1.0f);
-    lightingShader.setFloat("light.linear",    0.045f);
-    lightingShader.setFloat("light.quadratic", 0.0075f);
-    lightingShader.setVec3("light.origin",  camera.position);
-    lightingShader.setVec3("light.direction", camera.front);
-    lightingShader.setFloat("light.cutoff",   glm::cos(glm::radians(12.5f)));
-    lightingShader.setFloat("light.outerCutoff",   glm::cos(glm::radians(15.5f)));
-    // lightingShader.setVec3("light.origin", glm::vec3(lightPos));
+    // directional light
+    lightingShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+    lightingShader.setVec3("dirLight.ambient", 0.05f, 0.05f, 0.05f);
+    lightingShader.setVec3("dirLight.diffuse", 0.4f, 0.4f, 0.4f);
+    lightingShader.setVec3("dirLight.specular", 0.5f, 0.5f, 0.5f);
+    // point lights
+    for (int i = 0; i < 4; i++)
+    {
+      std::string prefix = std::format("pointLights[{}]", i);
+      lightingShader.setVec3(prefix + ".position", pointLightPositions[i]);
+      lightingShader.setVec3(prefix + ".ambient",  0.05f, 0.05f, 0.05f);
+      lightingShader.setVec3(prefix + ".diffuse",  lightColor.x * 0.7f, lightColor.y * 0.7f, lightColor.z * 0.7f); // darken diffuse light a bit
+      lightingShader.setVec3(prefix + ".specular", lightColor.x, lightColor.y, lightColor.z);
+      lightingShader.setFloat(prefix + ".constant",  1.0f);
+      lightingShader.setFloat(prefix + ".linear",    0.045f);
+      lightingShader.setFloat(prefix + ".quadratic", 0.0075f);
+    }
+
     // camera
     lightingShader.setVec3("viewPos", camera.position);
 
@@ -305,54 +321,44 @@ int main()
     lightingShader.setMat4("projection", projection);
     lightingShader.setMat4("view", view);
 
-    static glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f),
-        glm::vec3( 2.0f,  5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f, -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3( 2.4f, -0.4f, -3.5f),
-        glm::vec3(-1.7f,  3.0f, -7.5f),
-        glm::vec3( 1.3f, -2.0f, -2.5f),
-        glm::vec3( 1.5f,  2.0f, -2.5f),
-        glm::vec3( 1.5f,  0.2f, -1.5f),
-        glm::vec3(-1.3f,  1.0f, -1.5f)
-    };
-
+    float angle = float(tick) / 1000;
     static bool rotateCube = true;
     for (unsigned int i = 0; i < 10; i++)
     {
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, cubePositions[i]);
-        if (rotateCube)
-          model = glm::rotate(model, glm::radians(angle * i), glm::vec3(1.0f, 0.3f, 0.5f));
-        lightingShader.setMat4("model", model);
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, cubePositions[i]);
+      if (rotateCube)
+        model = glm::rotate(model, glm::radians(angle * i), glm::vec3(1.0f, 0.3f, 0.5f));
+      lightingShader.setMat4("model", model);
 
-        // bind diffuse map
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, diffuseMap);
+      // bind diffuse map
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, diffuseMap);
 
-        // bind specular map
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, specularMap);
+      // bind specular map
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, specularMap);
 
-        // render the cube
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+      // render the cube
+      glBindVertexArray(cubeVAO);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
     }
 
-
-    // also draw the lamp object
+    // also draw the lamp objects
     lightCubeShader.use();
     lightCubeShader.setVec3("lightColor",  lightColor.x, lightColor.y, lightColor.z);
     lightCubeShader.setMat4("projection", projection);
     lightCubeShader.setMat4("view", view);
-    glm::mat4 model(1.0f);
-    model = glm::translate(model, lightPos);
-    model = glm::scale(model, glm::vec3(0.2f));
-    lightCubeShader.setMat4("model", model);
+    for (glm::vec3& pos : pointLightPositions)
+    {
+      glm::mat4 model(1.0f);
+      model = glm::translate(model, pos);
+      model = glm::scale(model, glm::vec3(0.2f));
+      lightCubeShader.setMat4("model", model);
 
-    glBindVertexArray(lightCubeVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+      glBindVertexArray(lightCubeVAO);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
     // debug GUI
     ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f));
@@ -373,7 +379,6 @@ int main()
     ImGui::Text("Tick: %lu", tick);
     ImGui::Checkbox("Pause", &tickPaused);
     ImGui::Checkbox("Rotate cube", &rotateCube);
-    ImGui::Checkbox("Rotate light", &rotateLight);
     ImGui::SeparatorText("Lighting");
     ImGui::ColorEdit3("Light color", (float*)&lightColor, ImGuiColorEditFlags_NoInputs);
     ImGui::ColorEdit3("Background color", (float*)&backgroundColor, ImGuiColorEditFlags_NoInputs);
